@@ -83,16 +83,17 @@ builder.Services.AddTransient<AuthService>();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// Configuração para produção (remover a verificação de ambiente)
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 app.UseCors("AllowAllOrigins");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// Adicionar um endpoint simples para verificação de saúde
+app.MapGet("/health", () => "Healthy");
 
 app.Run();
