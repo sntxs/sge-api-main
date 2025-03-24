@@ -1,3 +1,9 @@
 .vs/
 /API/bin/Debug/net8.0
 /API/obj
+/API/appsettings.json
+/API/appsettings.Development.json
+/API/appsettings.Production.json
+/API/appsettings.Staging.json
+/API/appsettings.Local.json
+/API/appsettings.Local.json
