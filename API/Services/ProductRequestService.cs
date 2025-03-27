@@ -137,5 +137,141 @@ namespace API.Services
                 }
             }
         }
+
+        public async Task Update(Guid id, UpdateProductRequestRequest request)
+        {
+            using (MySqlConnection connection = new MySqlConnection(_configuration["ConnectionString"]))
+            {
+                try
+                {
+                    connection.Open();
+                    
+                    // Verificar se a requisição existe
+                    string query = "SELECT ProductId, Quantity FROM ProductRequest WHERE Id = @id";
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@id", id);
+                    
+                    Guid currentProductId;
+                    int currentRequestQuantity;
+                    
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (!await reader.ReadAsync())
+                            throw new Exception("Requisição de produto não encontrada.");
+                        
+                        currentProductId = reader.GetGuid("ProductId");
+                        currentRequestQuantity = reader.GetInt32("Quantity");
+                    }
+                    
+                    // Verificar a quantidade disponível do produto
+                    query = "SELECT Quantity FROM Product WHERE Id = @id";
+                    cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@id", currentProductId);
+                    
+                    int productAvailableQuantity;
+                    
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (!await reader.ReadAsync())
+                            throw new Exception("Produto não encontrado.");
+                        
+                        productAvailableQuantity = reader.GetInt32("Quantity");
+                    }
+                    
+                    // Calcular a diferença de quantidade
+                    int quantityDifference = request.Quantity - currentRequestQuantity;
+                    
+                    // Verificar se há quantidade suficiente disponível
+                    if (quantityDifference > 0 && quantityDifference > productAvailableQuantity)
+                        throw new Exception("Quantidade do produto excede o máximo disponível.");
+                    
+                    // Atualizar a requisição
+                    query = "UPDATE ProductRequest SET Quantity = @quantity WHERE Id = @id";
+                    cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@quantity", request.Quantity);
+                    cmd.Parameters.AddWithValue("@id", id);
+                    
+                    await cmd.ExecuteNonQueryAsync();
+                    
+                    // Atualizar a quantidade do produto
+                    int newProductQuantity = productAvailableQuantity - quantityDifference;
+                    
+                    query = "UPDATE Product SET Quantity = @quantity WHERE Id = @id";
+                    cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@quantity", newProductQuantity);
+                    cmd.Parameters.AddWithValue("@id", currentProductId);
+                    
+                    await cmd.ExecuteNonQueryAsync();
+                }
+                catch (MySqlException ex)
+                {
+                    throw new Exception("Erro ao conectar com o banco de dados: " + ex.Message);
+                }
+            }
+        }
+
+        public async Task Delete(Guid id)
+        {
+            using (MySqlConnection connection = new MySqlConnection(_configuration["ConnectionString"]))
+            {
+                try
+                {
+                    connection.Open();
+                    
+                    // Verificar se a requisição existe e obter detalhes
+                    string query = "SELECT ProductId, Quantity FROM ProductRequest WHERE Id = @id";
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@id", id);
+                    
+                    Guid productId;
+                    int requestQuantity;
+                    
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (!await reader.ReadAsync())
+                            throw new Exception("Requisição de produto não encontrada.");
+                        
+                        productId = reader.GetGuid("ProductId");
+                        requestQuantity = reader.GetInt32("Quantity");
+                    }
+                    
+                    // Obter a quantidade atual do produto
+                    query = "SELECT Quantity FROM Product WHERE Id = @id";
+                    cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@id", productId);
+                    
+                    int currentProductQuantity;
+                    
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (!await reader.ReadAsync())
+                            throw new Exception("Produto não encontrado.");
+                        
+                        currentProductQuantity = reader.GetInt32("Quantity");
+                    }
+                    
+                    // Excluir a requisição
+                    query = "DELETE FROM ProductRequest WHERE Id = @id";
+                    cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@id", id);
+                    
+                    await cmd.ExecuteNonQueryAsync();
+                    
+                    // Devolver a quantidade ao produto
+                    int newProductQuantity = currentProductQuantity + requestQuantity;
+                    
+                    query = "UPDATE Product SET Quantity = @quantity WHERE Id = @id";
+                    cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@quantity", newProductQuantity);
+                    cmd.Parameters.AddWithValue("@id", productId);
+                    
+                    await cmd.ExecuteNonQueryAsync();
+                }
+                catch (MySqlException ex)
+                {
+                    throw new Exception("Erro ao conectar com o banco de dados: " + ex.Message);
+                }
+            }
+        }
     }
 }
