@@ -42,13 +42,25 @@ namespace API.Services
                         if (!await reader.ReadAsync())
                             throw new Exception("Usuário não encontrado.");
                     }
+                    
+                    query = "SELECT 1 FROM Category where Id = @id";
 
-                    query = "INSERT INTO Product (Id, Name, Description, UserId, Quantity, CreatedAt) VALUES (UUID(), @name, @description, @userId, @quantity, @date)";
+                    cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@id", request.CategoryId);
+
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (!await reader.ReadAsync())
+                            throw new Exception("Categoria não encontrada.");
+                    }
+
+                    query = "INSERT INTO Product (Id, Name, Description, UserId, Quantity, CategoryId, CreatedAt) VALUES (UUID(), @name, @description, @userId, @quantity, @categoryId, @date)";
                     cmd = new MySqlCommand(query, connection);
                     cmd.Parameters.AddWithValue("@name", request.Name);
                     cmd.Parameters.AddWithValue("@description", request.Description);
                     cmd.Parameters.AddWithValue("@userId", request.UserId);
                     cmd.Parameters.AddWithValue("@quantity", request.Quantity);
+                    cmd.Parameters.AddWithValue("@categoryId", request.CategoryId);
                     cmd.Parameters.AddWithValue("@date", DateTime.UtcNow.AddHours(-3));
 
                     await cmd.ExecuteNonQueryAsync();
@@ -70,7 +82,9 @@ namespace API.Services
                 {
                     connection.Open();
 
-                    string query = "SELECT a.*, b.Name as UserName FROM Product a, User b where a.UserId = b.Id";
+                    string query = "SELECT a.*, b.Name as UserName, c.Name as CategoryName FROM Product a " +
+                                  "JOIN User b ON a.UserId = b.Id " +
+                                  "JOIN Category c ON a.CategoryId = c.Id";
 
                     MySqlCommand cmd = new MySqlCommand(query, connection);
 
@@ -85,6 +99,8 @@ namespace API.Services
                                 Description = reader.GetString("Description"),
                                 Quantity = reader.GetInt32("Quantity"),
                                 UserName = reader.GetString("UserName"),
+                                CategoryId = reader.GetGuid("CategoryId"),
+                                CategoryName = reader.GetString("CategoryName"),
                                 CreatedAt = reader.GetDateTime("CreatedAt"),
                             };
 
@@ -109,7 +125,10 @@ namespace API.Services
                 {
                     connection.Open();
 
-                    string query = "SELECT a.*, b.Name as UserName FROM Product a, User b where a.UserId = b.Id and a.id = @id";
+                    string query = "SELECT a.*, b.Name as UserName, c.Name as CategoryName FROM Product a " +
+                                  "JOIN User b ON a.UserId = b.Id " +
+                                  "JOIN Category c ON a.CategoryId = c.Id " +
+                                  "WHERE a.id = @id";
 
                     MySqlCommand cmd = new MySqlCommand(query, connection);
                     cmd.Parameters.AddWithValue("@id", id);
@@ -125,6 +144,8 @@ namespace API.Services
                                 Description = reader.GetString("Description"),
                                 UserName = reader.GetString("UserName"),
                                 Quantity = reader.GetInt32("Quantity"),
+                                CategoryId = reader.GetGuid("CategoryId"),
+                                CategoryName = reader.GetString("CategoryName"),
                                 CreatedAt = reader.GetDateTime("CreatedAt"),
                             };
 
@@ -160,13 +181,25 @@ namespace API.Services
                         if (await reader.ReadAsync())
                             throw new Exception("Nome de produto já está sendo usado.");
                     }
+                    
+                    query = "SELECT 1 FROM Category where Id = @id";
 
-                    query = "UPDATE Product SET Name = @name, Description = @description, Quantity = @quantity WHERE Id = @id";
+                    cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@id", request.CategoryId);
+
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (!await reader.ReadAsync())
+                            throw new Exception("Categoria não encontrada.");
+                    }
+
+                    query = "UPDATE Product SET Name = @name, Description = @description, Quantity = @quantity, CategoryId = @categoryId WHERE Id = @id";
 
                     cmd = new MySqlCommand(query, connection);
                     cmd.Parameters.AddWithValue("@name", request.Name);
                     cmd.Parameters.AddWithValue("@description", request.Description);
                     cmd.Parameters.AddWithValue("@quantity", request.Quantity);
+                    cmd.Parameters.AddWithValue("@categoryId", request.CategoryId);
                     cmd.Parameters.AddWithValue("@id", id);
 
                     int result = await cmd.ExecuteNonQueryAsync();

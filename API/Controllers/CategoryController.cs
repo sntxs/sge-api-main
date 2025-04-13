@@ -7,18 +7,18 @@ namespace API.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class ProductRequestController : ControllerBase
+    public class CategoryController : ControllerBase
     {
-        private readonly ProductRequestService _service;
+        private readonly CategoryService _service;
 
-        public ProductRequestController(ProductRequestService service)
+        public CategoryController(CategoryService service)
         {
             _service = service;
         }
 
         [HttpPost]
         [Authorize]
-        public async Task<IActionResult> Create(CreateProductRequestRequest request)
+        public async Task<IActionResult> Create(CreateUpdateCategoryRequest request)
         {
             try
             {
@@ -46,9 +46,24 @@ namespace API.Controllers
             }
         }
 
+        [HttpGet("{id}")]
+        [Authorize]
+        public async Task<IActionResult> GetById(Guid id)
+        {
+            try
+            {
+                var result = await _service.GetById(id);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
         [HttpPut("{id}")]
         [Authorize]
-        public async Task<IActionResult> Update(Guid id, UpdateProductRequestRequest request)
+        public async Task<IActionResult> Update(Guid id, CreateUpdateCategoryRequest request)
         {
             try
             {
@@ -75,20 +90,5 @@ namespace API.Controllers
                 return BadRequest(ex.Message);
             }
         }
-
-        [HttpGet("{id}")]
-        [Authorize]
-        public async Task<IActionResult> GetById(Guid id)
-        {
-            try
-            {
-                var result = await _service.GetById(id);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
     }
-}
+} 

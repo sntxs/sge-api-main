@@ -35,6 +35,7 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<ProductRequestService>();
 builder.Services.AddScoped<SectorService>();
+builder.Services.AddScoped<CategoryService>();
 
 builder.Services.AddCors(options =>
 {

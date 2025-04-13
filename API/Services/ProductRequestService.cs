@@ -86,23 +86,19 @@ namespace API.Services
                 {
                     connection.Open();
 
-                //    string query = @"
-                //SELECT 
-                //    a.Id, 
-                //    a.Quantity, 
-                //    a.CreatedAt, 
-                //    b.Name as UserName, 
-                //    b.SectorName, 
-                //    c.Name as ProductName 
-                //FROM 
-                //    ProductRequest a
-                //JOIN 
-                //    User b ON a.UserId = b.Id
-                //JOIN 
-                //    Product c ON a.ProductId = c.Id";
-
-                    string query = "SELECT a.*, b.Name AS UserName, c.Name AS ProductName, d.Id AS SectorId, d.Name AS SectorName, d.CreatedAt AS SectorCreatedAt " +
-                        "FROM ProductRequest a, User b, Product c, Sector d WHERE a.UserId = b.Id AND c.Id = a.ProductId AND b.SectorId = d.Id";
+                    string query = "SELECT a.*, " +
+                        "b.Name AS UserName, " +
+                        "c.Name AS ProductName, " +
+                        "d.Id AS SectorId, " +
+                        "d.Name AS SectorName, " +
+                        "d.CreatedAt AS SectorCreatedAt, " +
+                        "e.Id AS CategoryId, " +
+                        "e.Name AS CategoryName " +
+                        "FROM ProductRequest a " +
+                        "JOIN User b ON a.UserId = b.Id " +
+                        "JOIN Product c ON a.ProductId = c.Id " +
+                        "JOIN Sector d ON b.SectorId = d.Id " +
+                        "JOIN Category e ON c.CategoryId = e.Id";
 
                     MySqlCommand cmd = new MySqlCommand(query, connection);
 
@@ -117,6 +113,8 @@ namespace API.Services
                                 ProductName = reader.GetString("ProductName"),
                                 Quantity = reader.GetInt32("Quantity"),
                                 CreatedAt = reader.GetDateTime("CreatedAt"),
+                                CategoryId = reader.GetGuid("CategoryId"),
+                                CategoryName = reader.GetString("CategoryName"),
                                 UserSector = new GetSectorReponse()
                                 {
                                     Id = reader.GetGuid("SectorId"),
@@ -266,6 +264,66 @@ namespace API.Services
                     cmd.Parameters.AddWithValue("@id", productId);
                     
                     await cmd.ExecuteNonQueryAsync();
+                }
+                catch (MySqlException ex)
+                {
+                    throw new Exception("Erro ao conectar com o banco de dados: " + ex.Message);
+                }
+            }
+        }
+
+        public async Task<GetProductRequestResponse> GetById(Guid id)
+        {
+            using (MySqlConnection connection = new MySqlConnection(_configuration["ConnectionString"]))
+            {
+                try
+                {
+                    connection.Open();
+
+                    string query = "SELECT a.*, " +
+                        "b.Name AS UserName, " +
+                        "c.Name AS ProductName, " +
+                        "d.Id AS SectorId, " +
+                        "d.Name AS SectorName, " +
+                        "d.CreatedAt AS SectorCreatedAt, " +
+                        "e.Id AS CategoryId, " +
+                        "e.Name AS CategoryName " +
+                        "FROM ProductRequest a " +
+                        "JOIN User b ON a.UserId = b.Id " +
+                        "JOIN Product c ON a.ProductId = c.Id " +
+                        "JOIN Sector d ON b.SectorId = d.Id " +
+                        "JOIN Category e ON c.CategoryId = e.Id " +
+                        "WHERE a.Id = @id";
+
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@id", id);
+
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            var item = new GetProductRequestResponse
+                            {
+                                Id = reader.GetGuid("Id"),
+                                UserName = reader.GetString("UserName"),
+                                ProductName = reader.GetString("ProductName"),
+                                Quantity = reader.GetInt32("Quantity"),
+                                CreatedAt = reader.GetDateTime("CreatedAt"),
+                                CategoryId = reader.GetGuid("CategoryId"),
+                                CategoryName = reader.GetString("CategoryName"),
+                                UserSector = new GetSectorReponse()
+                                {
+                                    Id = reader.GetGuid("SectorId"),
+                                    Name = reader.GetString("SectorName"),
+                                    CreatedAt = reader.GetDateTime("SectorCreatedAt")
+                                },
+                            };
+
+                            return item;
+                        }
+                        
+                        throw new Exception("Requisição de produto não encontrada.");
+                    }
                 }
                 catch (MySqlException ex)
                 {

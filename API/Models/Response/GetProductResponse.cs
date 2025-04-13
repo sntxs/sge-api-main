@@ -8,5 +8,7 @@
         public string UserName { get; set; }
         public int Quantity { get; set; }
         public DateTime CreatedAt { get; set; }
+        public Guid CategoryId { get; set; }
+        public string CategoryName { get; set; }
     }
 }
