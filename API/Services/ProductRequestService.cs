@@ -121,6 +121,8 @@ namespace API.Services
                                     Name = reader.GetString("SectorName"),
                                     CreatedAt = reader.GetDateTime("SectorCreatedAt")
                                 },
+                                Delivered = reader.GetBoolean("Delivered"),
+                                DeliveredAt = reader.IsDBNull(reader.GetOrdinal("DeliveredAt")) ? null : reader.GetDateTime("DeliveredAt")
                             };
 
                             items.Add(item);
@@ -317,6 +319,8 @@ namespace API.Services
                                     Name = reader.GetString("SectorName"),
                                     CreatedAt = reader.GetDateTime("SectorCreatedAt")
                                 },
+                                Delivered = reader.GetBoolean("Delivered"),
+                                DeliveredAt = reader.IsDBNull(reader.GetOrdinal("DeliveredAt")) ? null : reader.GetDateTime("DeliveredAt")
                             };
 
                             return item;
@@ -324,6 +328,77 @@ namespace API.Services
                         
                         throw new Exception("Requisição de produto não encontrada.");
                     }
+                }
+                catch (MySqlException ex)
+                {
+                    throw new Exception("Erro ao conectar com o banco de dados: " + ex.Message);
+                }
+            }
+        }
+
+        public async Task MarkAsDelivered(Guid id)
+        {
+            using (MySqlConnection connection = new MySqlConnection(_configuration["ConnectionString"]))
+            {
+                try
+                {
+                    connection.Open();
+                    
+                    // Verificar se a requisição existe
+                    string query = "SELECT 1 FROM ProductRequest WHERE Id = @id";
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@id", id);
+                    
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (!await reader.ReadAsync())
+                            throw new Exception("Requisição de produto não encontrada.");
+                    }
+                    
+                    // Atualizar a requisição como entregue
+                    query = "UPDATE ProductRequest SET Delivered = 1, DeliveredAt = @deliveredAt WHERE Id = @id";
+                    cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@deliveredAt", DateTime.UtcNow.AddHours(-3));
+                    cmd.Parameters.AddWithValue("@id", id);
+                    
+                    await cmd.ExecuteNonQueryAsync();
+                }
+                catch (MySqlException ex)
+                {
+                    throw new Exception("Erro ao conectar com o banco de dados: " + ex.Message);
+                }
+            }
+        }
+
+        public async Task CancelDelivery(Guid id)
+        {
+            using (MySqlConnection connection = new MySqlConnection(_configuration["ConnectionString"]))
+            {
+                try
+                {
+                    connection.Open();
+                    
+                    // Verificar se a requisição existe e está marcada como entregue
+                    string query = "SELECT Delivered FROM ProductRequest WHERE Id = @id";
+                    MySqlCommand cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@id", id);
+                    
+                    using (MySqlDataReader reader = cmd.ExecuteReader())
+                    {
+                        if (!await reader.ReadAsync())
+                            throw new Exception("Requisição de produto não encontrada.");
+                        
+                        bool isDelivered = reader.GetBoolean("Delivered");
+                        if (!isDelivered)
+                            throw new Exception("Esta requisição não está marcada como entregue.");
+                    }
+                    
+                    // Cancelar a entrega
+                    query = "UPDATE ProductRequest SET Delivered = 0, DeliveredAt = NULL WHERE Id = @id";
+                    cmd = new MySqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@id", id);
+                    
+                    await cmd.ExecuteNonQueryAsync();
                 }
                 catch (MySqlException ex)
                 {

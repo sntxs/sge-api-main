@@ -90,5 +90,35 @@ namespace API.Controllers
                 return BadRequest(ex.Message);
             }
         }
+
+        [HttpPut("{id}/deliver")]
+        [Authorize]
+        public async Task<IActionResult> MarkAsDelivered(Guid id)
+        {
+            try
+            {
+                await _service.MarkAsDelivered(id);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPut("{id}/cancel-delivery")]
+        [Authorize]
+        public async Task<IActionResult> CancelDelivery(Guid id)
+        {
+            try
+            {
+                await _service.CancelDelivery(id);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
     }
 }

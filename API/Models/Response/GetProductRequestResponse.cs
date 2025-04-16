@@ -10,5 +10,7 @@
         public DateTime CreatedAt { get; set; }
         public Guid CategoryId { get; set; }
         public string CategoryName { get; set; }
+        public bool Delivered { get; set; }
+        public DateTime? DeliveredAt { get; set; }
     }
 }
